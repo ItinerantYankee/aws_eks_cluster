@@ -89,6 +89,27 @@ resource "aws_internet_gateway" "eks_internet_gateway" {
   vpc_id = aws_vpc.eks-vpc.id
 
   tags = {
-    Name = "EKS-Internet-Gateway"
+    Name = "${var.cluster_name}-Internet-Gateway"
+  }
+}
+
+# Create EIP to be used with NAT Gateway
+resource "aws_eip" "nat_eip" {
+  domain = "vpc"      # EIP will be used for a VPC.
+
+  tags = {
+    Name = "${var.cluster_name}-NAT-EIP"
+  }
+}
+
+# Create NAT Gateway
+# Allows worker nodes to access Internet
+# It's assigned to the first public subnet
+resource "aws_nat_gateway" "eks_nat_gateway" {
+  allocation_id = aws_eip.nat_eip.id        # Links to EIP
+  subnet_id = aws_subnet.public_subnets[0].id
+
+  tags = {
+    Name = "${var.cluster_name}-NAT"
   }
 }
