@@ -4,9 +4,9 @@ terraform {
       source = "hashicorp/aws"      # registry.terraform.io/hashicorp
       version = "5.78.0"
     }
-
-    required_version = ">= 1.2.0"   # Refers to Terraform CLI version
   }
+
+  required_version = ">= 1.2.0"     # Refers to Terraform CLI version
 }
 
 # Create AWS Region variable
