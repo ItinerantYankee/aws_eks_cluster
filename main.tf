@@ -178,3 +178,24 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_iam_role_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
   role       = aws_iam_role.eks_cluster_iam_role.name
 }
+
+# Create IAM role for the EC2 instances that will be the cluster nodes
+resource "aws_iam_role" "eks_cluster_nodes_role" {
+  name = "${var.cluster_name}-eks-cluster-nodes-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+}
+
+# Create IAM role policy attachment that attaches the AWS-managed policy to the role created above
+resource "aws_iam_role_policy_attachment" "eks" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_cluster_nodes_role.name
+}
