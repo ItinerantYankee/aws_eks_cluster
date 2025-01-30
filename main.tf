@@ -155,3 +155,26 @@ resource "aws_route_table_association" "private_subnets_route_table_association"
   subnet_id = aws_subnet.private_subnets[count.index].id
   route_table_id = aws_route_table.private_subnets_route_table.id
 }
+
+# Create EKS IAM role that will allow the EKS cluster do necessary operations in AWS
+# The role by itself doesn't grant permissions until we use the IAM policy attachment to attach the AWS-managed
+#   AmazonEKSClusterPolicy policy.
+resource "aws_iam_role" "eks_cluster_iam_role" {
+  name = "${var.cluster_name}-eks-cluster-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "eks.amazonaws.com"
+      }
+    }]
+  })
+}
+
+# Create IAM role policy attachment that attaches the AWS-managed policy to the role created above
+resource "aws_iam_role_policy_attachment" "eks_cluster_iam_role_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.eks_cluster_iam_role.name
+}
