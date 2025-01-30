@@ -194,8 +194,19 @@ resource "aws_iam_role" "eks_cluster_nodes_role" {
   })
 }
 
-# Create IAM role policy attachment that attaches the AWS-managed policy to the role created above
-resource "aws_iam_role_policy_attachment" "eks" {
+# Create IAM role policy attachment that attaches the AWS-managed policies to the role created above
+resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
+  # Worker node policy allows nodes (EC2 instances) to interact with EKS control plane
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_cluster_nodes_role.name
+}
+resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
+  # CNI policy allows the cluster nodes to manage network interfaces
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.eks_cluster_nodes_role.name
+}
+resource "aws_iam_role_policy_attachment" "eks_container_registry_policy" {
+  # Allows access to Elastic Continer Registry (ECR)
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.eks_cluster_nodes_role.name
 }
