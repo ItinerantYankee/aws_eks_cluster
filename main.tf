@@ -42,6 +42,13 @@ variable "subnet_prefix" {
   default = "subnet"
 }
 
+# Define EC2 worker nodes instance type
+variable "instance_type" {
+  description = "Instance type for EKS EC2 worker nodes"
+  type = string
+  default = "t3.small"
+}
+
 # Get availability zones
 data "aws_availability_zones" "available_zones" {}
 
@@ -209,4 +216,55 @@ resource "aws_iam_role_policy_attachment" "eks_container_registry_policy" {
   # Allows access to Elastic Continer Registry (ECR)
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.eks_cluster_nodes_role.name
+}
+
+# Create EKS cluster
+resource "aws_eks_cluster" "eks_cluster" {
+  name     = var.cluster_name
+  role_arn = aws_iam_role.eks_cluster_iam_role.arn
+  version = "1.27"
+
+  vpc_config {
+    subnet_ids = concat(aws_subnet.private_subnets[*].id, aws_subnet.public_subnets[*].id)
+    endpoint_public_access = true
+    endpoint_private_access = true
+  }
+
+  depends_on = [
+  aws_iam_role_policy_attachment.eks_cluster_iam_role_attachment]
+}
+
+# Create EKS nodes group
+resource "aws_eks_node_group" "eks_node_group" {
+  cluster_name  = aws_eks_cluster.eks_cluster.name
+  node_group_name = "${var.cluster_name}-eks-node-group"
+  node_role_arn = aws_iam_role.eks_cluster_nodes_role.arn
+  subnet_ids = aws_subnet.private_subnets[*].id
+
+  scaling_config {
+    desired_size = 4
+    max_size     = 10
+    min_size     = 4
+  }
+
+  instance_types = [var.instance_type]
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_worker_node_policy,
+    aws_iam_role_policy_attachment.eks_cni_policy,
+    aws_iam_role_policy_attachment.eks_container_registry_policy
+  ]
+}
+
+# Outputs
+output "cluster_endpoint" {
+  value = aws_eks_cluster.eks_cluster.endpoint
+}
+
+output "cluster_name" {
+  value = aws_eks_cluster.eks_cluster.name
+}
+
+output "cluster_certificate_authority" {
+  value = aws_eks_cluster.eks_cluster.certificate_authority[0].data
 }
